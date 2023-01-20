@@ -3,7 +3,6 @@ package simpledb.common;
 import simpledb.storage.Field;
 import simpledb.storage.IntField;
 import simpledb.storage.StringField;
-
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.Serializable;

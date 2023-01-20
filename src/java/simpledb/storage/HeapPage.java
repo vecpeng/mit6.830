@@ -5,10 +5,9 @@ import simpledb.common.Database;
 import simpledb.common.DbException;
 import simpledb.common.Debug;
 import simpledb.transaction.TransactionId;
-
+import simpledb.storage.BufferPool;
 import java.io.*;
-import java.util.Iterator;
-import java.util.NoSuchElementException;
+import java.util.*;
 
 /**
  * Each instance of HeapPage stores data for one page of HeapFiles and
@@ -75,9 +74,7 @@ public class HeapPage implements Page {
      * @return the number of tuples on this page
      */
     private int getNumTuples() {
-        // TODO: some code goes here
-        return 0;
-
+        return BufferPool.getPageSize() * 8 / (td.getSize() * 8 + 1);
     }
 
     /**
@@ -86,10 +83,7 @@ public class HeapPage implements Page {
      * @return the number of bytes in the header of a page in a HeapFile with each tuple occupying tupleSize bytes
      */
     private int getHeaderSize() {
-
-        // TODO: some code goes here
-        return 0;
-
+        return (getNumTuples() / 8) + ((getNumTuples() % 8 == 0) ? 0 : 1);
     }
 
     /**
@@ -121,8 +115,7 @@ public class HeapPage implements Page {
      * @return the PageId associated with this page.
      */
     public HeapPageId getId() {
-        // TODO: some code goes here
-        throw new UnsupportedOperationException("implement this");
+        return pid;
     }
 
     /**
@@ -293,24 +286,28 @@ public class HeapPage implements Page {
      * Returns the number of unused (i.e., empty) slots on this page.
      */
     public int getNumUnusedSlots() {
-        // TODO: some code goes here
-        return 0;
+        int count = 0;
+        for (int i = 0; i < tuples.length; i++) {
+            count += isSlotUsed(i) ? 0 : 1;
+        }
+        return count;
     }
 
     /**
      * Returns true if associated slot on this page is filled.
      */
     public boolean isSlotUsed(int i) {
-        // TODO: some code goes here
-        return false;
+        if (i == (8*42) && header.length == 42){
+            System.out.println("");
+        }
+        return (header[i / 8] & (1 << (i % 8))) == (1 << (i % 8));
     }
 
     /**
      * Abstraction to fill or clear a slot on this page.
      */
     private void markSlotUsed(int i, boolean value) {
-        // TODO: some code goes here
-        // not necessary for lab1
+       //TODO
     }
 
     /**
@@ -318,9 +315,20 @@ public class HeapPage implements Page {
      *         (note that this iterator shouldn't return tuples in empty slots!)
      */
     public Iterator<Tuple> iterator() {
-        // TODO: some code goes here
-        return null;
-    }
+        Iterator<Tuple> iter = new Iterator<Tuple>() {
+            int cursor = -1;
+            @Override
+            public boolean hasNext() {
+                return cursor < (getNumTuples() - 1) && tuples[cursor + 1] != null;
+            }
 
+            @Override
+            public Tuple next() {
+                cursor++;
+                return tuples[cursor];
+            }
+        };
+        return iter;
+    }
 }
 

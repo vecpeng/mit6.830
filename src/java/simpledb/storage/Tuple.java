@@ -1,8 +1,11 @@
 package simpledb.storage;
 
 import java.io.Serializable;
+import java.sql.Array;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.stream.Collectors;
 
 /**
  * Tuple maintains information about the contents of a tuple. Tuples have a
@@ -12,7 +15,9 @@ import java.util.Iterator;
 public class Tuple implements Serializable {
 
     private static final long serialVersionUID = 1L;
-
+    private TupleDesc td;
+    public RecordId recordId;
+    ArrayList<Field> fields;
     /**
      * Create a new tuple with the specified schema (type).
      *
@@ -20,15 +25,15 @@ public class Tuple implements Serializable {
      *           instance with at least one field.
      */
     public Tuple(TupleDesc td) {
-        // TODO: some code goes here
+        this.td = td;
+        this.fields = new ArrayList<Field>(td.numFields());
     }
 
     /**
      * @return The TupleDesc representing the schema of this tuple.
      */
     public TupleDesc getTupleDesc() {
-        // TODO: some code goes here
-        return null;
+        return td;
     }
 
     /**
@@ -36,8 +41,7 @@ public class Tuple implements Serializable {
      *         be null.
      */
     public RecordId getRecordId() {
-        // TODO: some code goes here
-        return null;
+        return recordId;
     }
 
     /**
@@ -46,7 +50,7 @@ public class Tuple implements Serializable {
      * @param rid the new RecordId for this tuple.
      */
     public void setRecordId(RecordId rid) {
-        // TODO: some code goes here
+        recordId = rid;
     }
 
     /**
@@ -56,7 +60,11 @@ public class Tuple implements Serializable {
      * @param f new value for the field.
      */
     public void setField(int i, Field f) {
-        // TODO: some code goes here
+        if (i == fields.size()) {
+            fields.add(f);
+            return;
+        }
+        fields.set(i, f);
     }
 
     /**
@@ -64,8 +72,12 @@ public class Tuple implements Serializable {
      * @return the value of the ith field, or null if it has not been set.
      */
     public Field getField(int i) {
-        // TODO: some code goes here
-        return null;
+        try {
+            Field field = fields.get(i);
+            return field;
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     /**
@@ -77,22 +89,42 @@ public class Tuple implements Serializable {
      * where \t is any whitespace (except a newline)
      */
     public String toString() {
-        // TODO: some code goes here
-        throw new UnsupportedOperationException("Implement this");
+        return  fields.stream().map(field -> field.toString()).collect(Collectors.joining("\\"));
     }
 
     /**
      * @return An iterator which iterates over all the fields of this tuple
      */
     public Iterator<Field> fields() {
-        // TODO: some code goes here
-        return null;
+        Iterator<Field> iter = new Iterator<Field>(){
+            //游标指针
+            private int cursor = -1;
+
+            /**
+             * 判断是否存在下一个元素
+             * @return
+             */
+            public boolean hasNext() {
+                return cursor+1 < fields.size();
+            }
+
+            /**
+             * 获取下一个元素
+             * @param args
+             */
+            public Field next() {
+                cursor++;
+                return getField(cursor);
+            }
+
+        };
+        return iter;
     }
 
     /**
      * reset the TupleDesc of this tuple (only affecting the TupleDesc)
      */
     public void resetTupleDesc(TupleDesc td) {
-        // TODO: some code goes here
+        this.td = td;
     }
 }

@@ -38,13 +38,15 @@ public class BufferPool {
      */
     public static final int DEFAULT_PAGES = 50;
 
+    private LRUCache pages;
+
     /**
      * Creates a BufferPool that caches up to numPages pages.
      *
      * @param numPages maximum number of pages in this buffer pool.
      */
     public BufferPool(int numPages) {
-        // TODO: some code goes here
+        pages = new LRUCache(numPages);
     }
 
     public static int getPageSize() {
@@ -77,9 +79,14 @@ public class BufferPool {
      * @param perm the requested permissions on the page
      */
     public Page getPage(TransactionId tid, PageId pid, Permissions perm)
-            throws TransactionAbortedException, DbException {
-        // TODO: some code goes here
-        return null;
+        throws TransactionAbortedException, DbException {
+        Page p = pages.get(pid);
+        if (p == null) {
+            DbFile dbFile = Database.getCatalog().getDatabaseFile(pid.getTableId());
+            p = dbFile.readPage(pid);
+            pages.put(pid, p);
+        }
+        return p;
     }
 
     /**
@@ -218,5 +225,78 @@ public class BufferPool {
         // TODO: some code goes here
         // not necessary for lab1
     }
+}
 
+/**
+ * 在链头放最久未被使用的元素，链尾放刚刚添加或访问的元素
+ */
+class LRUCache {
+    class Node {
+        PageId key;
+        Page value;
+        Node pre, next;
+
+        Node(PageId key, Page value) {
+            this.key = key;
+            this.value = value;
+            pre = this;
+            next = this;
+        }
+    }
+
+    private final int capacity;// LRU Cache的容量
+    private Node dummy;// dummy节点是一个冗余节点，dummy的next是链表的第一个节点，dummy的pre是链表的最后一个节点
+    private Map<PageId, Node> cache;//保存key-Node对，Node是双向链表节点
+
+    public LRUCache(int capacity) {
+        this.capacity = capacity;
+        dummy = new Node(null, null);
+        cache = new ConcurrentHashMap<>();
+    }
+
+    public Page get(PageId key) throws DbException {
+        Node node = cache.get(key);
+        if (node == null) return null;
+        remove(node);
+        add(node);
+        return node.value;
+    }
+
+    public void put(PageId key, Page value) {
+        Node node = cache.get(key);
+        if (node == null) {
+            if (cache.size() >= capacity) {
+                cache.remove(dummy.next.key);
+                remove(dummy.next);
+            }
+        } else {
+            cache.remove(node.key);
+            remove(node);
+        }
+        node = new Node(key, value);
+        cache.put(key, node);
+        add(node);
+    }
+
+    /**
+     * 在链表尾部添加新节点
+     *
+     * @param node 新节点
+     */
+    private void add(Node node) {
+        dummy.pre.next = node;
+        node.pre = dummy.pre;
+        node.next = dummy;
+        dummy.pre = node;
+    }
+
+    /**
+     * 从双向链表中删除该节点
+     *
+     * @param node 要删除的节点
+     */
+    private void remove(Node node) {
+        node.pre.next = node.next;
+        node.next.pre = node.pre;
+    }
 }

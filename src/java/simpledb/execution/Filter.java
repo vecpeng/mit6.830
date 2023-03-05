@@ -5,6 +5,9 @@ import simpledb.storage.Tuple;
 import simpledb.storage.TupleDesc;
 import simpledb.transaction.TransactionAbortedException;
 
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 import java.util.NoSuchElementException;
 
 /**
@@ -13,6 +16,8 @@ import java.util.NoSuchElementException;
 public class Filter extends Operator {
 
     private static final long serialVersionUID = 1L;
+    private final List<Tuple> childTups = new ArrayList<>();
+    private Iterator<Tuple> it;
 
     /**
      * Constructor accepts a predicate to apply and a child operator to read
@@ -21,31 +26,42 @@ public class Filter extends Operator {
      * @param p     The predicate to filter tuples with
      * @param child The child operator
      */
+    Predicate p;
+    OpIterator child;
     public Filter(Predicate p, OpIterator child) {
-        // TODO: some code goes here
+        this.p = p;
+        this.child = child;
     }
 
     public Predicate getPredicate() {
-        // TODO: some code goes here
-        return null;
+        return p;
     }
 
     public TupleDesc getTupleDesc() {
-        // TODO: some code goes here
-        return null;
+        return child.getTupleDesc();
     }
 
     public void open() throws DbException, NoSuchElementException,
             TransactionAbortedException {
-        // TODO: some code goes here
+       child.open();
+       while(child.hasNext()) {
+           Tuple t = child.next();
+           if (p.filter(t)) {
+               childTups.add(t);
+           }
+       }
+       it = childTups.iterator();
+       super.open();
     }
 
     public void close() {
-        // TODO: some code goes here
+        super.close();
+        child.close();
+        it = null;
     }
 
     public void rewind() throws DbException, TransactionAbortedException {
-        // TODO: some code goes here
+        it = childTups.iterator();
     }
 
     /**
@@ -59,19 +75,21 @@ public class Filter extends Operator {
      */
     protected Tuple fetchNext() throws NoSuchElementException,
             TransactionAbortedException, DbException {
-        // TODO: some code goes here
-        return null;
+        if (it != null && it.hasNext()) {
+            return it.next();
+        } else {
+            return null;
+        }
     }
 
     @Override
     public OpIterator[] getChildren() {
-        // TODO: some code goes here
-        return null;
+        return new OpIterator[]{this.child};
     }
 
     @Override
     public void setChildren(OpIterator[] children) {
-        // TODO: some code goes here
+        this.child = children[0];
     }
 
 }
